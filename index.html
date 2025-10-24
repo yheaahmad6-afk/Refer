@@ -1,0 +1,44 @@
+export default {
+  async fetch(request) {
+    // عنوان الموقع النهائي (استبدل بموقعك)
+    const TARGET_URL = "https://googlem.com";
+
+    // المسار الذي يعمل كوسيط (مثل /proxy/)
+    const PROXY_ENDPOINT = "/proxy/";
+
+    async function handleRequest(request) {
+      const url = new URL(request.url);
+      let targetUrl = TARGET_URL + url.pathname; // يضيف المسار من الطلب الأصلي
+
+      // إنشاء طلب جديد للموقع النهائي
+      request = new Request(targetUrl, request);
+
+      // تعديل الـ Referer: هنا نجعله فارغًا لإخفائه، أو استبدل بقيمة مزيفة مثل "https://example.com"
+      request.headers.set("Referer", ""); // أو request.headers.set("Referer", "https://example.com");
+
+      // إرسال الطلب المعدل
+      let response = await fetch(request);
+
+      // إعادة إنشاء الرد لإمكانية تعديل الرؤوس إذا لزم
+      response = new Response(response.body, response);
+
+      // إضافة رأس Vary للكاش إذا أردت
+      response.headers.append("Vary", "Referer");
+
+      return response;
+    }
+
+    const url = new URL(request.url);
+    if (url.pathname.startsWith(PROXY_ENDPOINT)) {
+      // التعامل مع الطلبات GET, POST, إلخ
+      if (request.method === "GET" || request.method === "POST" || request.method === "HEAD") {
+        return handleRequest(request);
+      } else {
+        return new Response(null, { status: 405, statusText: "Method Not Allowed" });
+      }
+    } else {
+      // صفحة اختبار بسيطة إذا لم يكن المسار صحيحًا
+      return new Response("Welcome to Referer Proxy! Use /proxy/ path.", { status: 200 });
+    }
+  },
+};
